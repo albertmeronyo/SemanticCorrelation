@@ -3,25 +3,40 @@
 # semanticCorrelation: similarity between statistical concepts
 
 from nltk.corpus import wordnet
+import nltk
 from SPARQLWrapper import SPARQLWrapper, JSON
 import argparse
 import logging
+import csv
+from gensim import corpora, models, similarities
 
 class SemanticCorrelation():
     
-    def __init__(self, __endpoint, __logLevel):
+    def __init__(self, __endpoint, __logLevel, __outfile, __infile = None):
         self.log = logging.getLogger('SemanticCorrelation')
         self.log.setLevel(__logLevel)
 
         self.endpoint = __endpoint
+        self.outfile = __outfile
 
         self.log.debug('Setting up data structures...')
         self.concepts = []
         self.conceptsMatrix = []
 
         self.log.debug('Querying endpoint at %s...' % self.endpoint)
-        self.queryEndpoint()
-        self.computeSimilarityMatrix()
+        # self.queryEndpoint()
+        self.readLocalFile(__infile)
+        self.log.debug('Computing semantic similarity...')
+        # self.computeSimilarityMatrix()
+        self.computeLSI()
+        self.log.debug('Serializing to %s...' % self.outfile)
+        self.serializeSimilarityMatrix(self.outfile)
+
+    def readLocalFile(self, infile):
+        with open(infile, 'rb') as csvfile:
+            csvreader = csv.reader(csvfile, delimiter=',', quotechar='\"')
+            for row in csvreader:
+                self.concepts.append(row)
 
     def queryEndpoint(self):
         sparql = SPARQLWrapper(self.endpoint)
@@ -98,7 +113,6 @@ class SemanticCorrelation():
 
     def computeSimilarityMatrix(self):
         # We put all these in a NxN matrix to pair all of them
-        self.log.debug('Building %s x %s similarity matrix...' % (len(self.concepts), len(self.concepts)))
         for i in range(len(self.concepts)):
             self.conceptsMatrix.append([])
             for j in range(len(self.concepts)):
@@ -110,6 +124,31 @@ class SemanticCorrelation():
                 if synsetsA and synsetsB:
                     similarity = synsetsA[0].path_similarity(synsetsB[0])
                 self.conceptsMatrix[i].append(similarity)
+
+    def computeLSI(self):
+        # stoplist = set('for a of the and to in as'.split())
+        texts = [[word for word in nltk.word_tokenize(document.lower()) if word not in nltk.corpus.stopwords.words('english')] for document in self.concepts]
+
+        # remove words that appear only once
+        all_tokens = sum(texts, [])
+        tokens_once = set(word for word in set(all_tokens) if all_tokens.count(word) == 1)
+        texts = [[word for word in text if word not in tokens_once] for text in texts]
+        print texts
+        
+        dictionary = corpora.Dictionary(texts)
+        dictionary.save('/tmp/deerwester.dict')
+        print(dictionary)
+
+        corpus = [dictionary.doc2bow(text) for text in texts]
+        corpora.MmCorpus.serialize('/tmp/deerwester.mm', corpus)
+        print(corpus)
+
+        tfidf = models.TfidfModel(corpus)
+        corpus_tfidf = tfidf[corpus]
+        lsi = models.LsiModel(corpus_tfidf, id2word=dictionary, num_topics=2) # initialize an LSI transformation
+        corpus_lsi = lsi[corpus_tfidf] # create a double wrapper over the original corpus: bow->tfidf->fold-in-lsi
+        lsi.print_topics(2)
+
 
     def querySimilarityMatrix(self, a, b):
         if a in self.concepts and b in self.concepts:
@@ -123,6 +162,17 @@ class SemanticCorrelation():
                 self.log.info("%s not found in %s" % (a, self.endpoint))
             if b not in self.concepts:
                 self.log.info("%s not found in %s" % (b, self.endpoint))
+
+    def serializeSimilarityMatrix(self, outfile):
+        with open(outfile, 'wb') as csvfile:
+            csvwriter = csv.writer(csvfile, delimiter=',',
+                                    quotechar='\"', quoting=csv.QUOTE_MINIMAL)
+            for i in range(len(self.concepts)):
+                for j in range(len(self.concepts)):
+                    csvwriter.writerow([self.concepts[i], 
+                                        self.concepts[j], 
+                                        self.conceptsMatrix[i][j]])
+
 
 if __name__ == "__main__":
     # Argument parsing
@@ -143,6 +193,13 @@ if __name__ == "__main__":
     parser.add_argument('--query-b', '-qb',
                         help = "Second concept to compare",
                         required = True)
+    parser.add_argument('--outfile', '-o',
+                        help = "Output CSV file to write similarities",
+                        required = True)
+    parser.add_argument('--infile', '-i',
+                        help = "Read from local file instead of endpoint",
+                        required = False)
+
     args = parser.parse_args()
 
     # Logging
@@ -153,6 +210,6 @@ if __name__ == "__main__":
     logging.info('Initializing...')
 
     # Instance
-    semcor = SemanticCorrelation(args.endpoint, logLevel)
+    semcor = SemanticCorrelation(args.endpoint, logLevel, args.outfile, args.infile)
 
     logging.info('Done.')
