@@ -21,22 +21,25 @@ class SemanticCorrelation():
 
         self.log.debug('Setting up data structures...')
         self.concepts = []
-        self.conceptsMatrix = []
+        self.datasets = []
+        self.similarity = {} # keys are tuples (concept_1, concept_2)
 
         self.log.debug('Querying endpoint at %s...' % self.endpoint)
-        # self.queryEndpoint()
-        self.readLocalFile(__infile)
+        self.queryEndpoint()
+        # self.readLocalFile(__infile)
         self.log.debug('Computing semantic similarity...')
-        # self.computeSimilarityMatrix()
+        # self.computeWordnetSimilarity()
         self.computeLSI()
+        self.computeLSISimilarity()
+        # print self.similarity
         self.log.debug('Serializing to %s...' % self.outfile)
-        self.serializeSimilarityMatrix(self.outfile)
+        self.serializeSimilarity(self.outfile)
 
     def readLocalFile(self, infile):
         with open(infile, 'rb') as csvfile:
             csvreader = csv.reader(csvfile, delimiter=',', quotechar='\"')
             for row in csvreader:
-                self.concepts.append(row)
+                self.concepts.append(row[0])
 
     def queryEndpoint(self):
         sparql = SPARQLWrapper(self.endpoint)
@@ -91,7 +94,7 @@ class SemanticCorrelation():
         PREFIX g-projects: <http://worldbank.270a.info/graph/world-bank-projects-and-operations>
         PREFIX g-indicators: <http://worldbank.270a.info/graph/world-development-indicators>
 
-        SELECT DISTINCT ?title
+        SELECT DISTINCT ?dataset ?title
         WHERE {
         GRAPH g-indicators: {
         ?s qb:dataSet ?dataset .
@@ -109,12 +112,12 @@ class SemanticCorrelation():
 
         for result in results["results"]["bindings"]:
             self.concepts.append(result["title"]["value"])
+            self.datasets.append(result["dataset"]["value"])
         self.log.debug('Fecthed %s results' % len(self.concepts))
 
-    def computeSimilarityMatrix(self):
+    def computeWordnetSimilarity(self):
         # We put all these in a NxN matrix to pair all of them
         for i in range(len(self.concepts)):
-            self.conceptsMatrix.append([])
             for j in range(len(self.concepts)):
                 # Look for all sysnsets and get first
                 # If some not found, similarity = -1
@@ -123,7 +126,7 @@ class SemanticCorrelation():
                 similarity = None
                 if synsetsA and synsetsB:
                     similarity = synsetsA[0].path_similarity(synsetsB[0])
-                self.conceptsMatrix[i].append(similarity)
+                self.similarity[(i,j)] = similarity
 
     def computeLSI(self):
         # stoplist = set('for a of the and to in as'.split())
@@ -133,45 +136,57 @@ class SemanticCorrelation():
         all_tokens = sum(texts, [])
         tokens_once = set(word for word in set(all_tokens) if all_tokens.count(word) == 1)
         texts = [[word for word in text if word not in tokens_once] for text in texts]
-        print texts
+        # print texts
         
-        dictionary = corpora.Dictionary(texts)
-        dictionary.save('/tmp/deerwester.dict')
-        print(dictionary)
+        self.dictionary = corpora.Dictionary(texts)
+        self.dictionary.save('/tmp/deerwester.dict')
+        # print(dictionary)
 
-        corpus = [dictionary.doc2bow(text) for text in texts]
-        corpora.MmCorpus.serialize('/tmp/deerwester.mm', corpus)
-        print(corpus)
+        self.corpus = [self.dictionary.doc2bow(text) for text in texts]
+        corpora.MmCorpus.serialize('/tmp/deerwester.mm', self.corpus)
+        # print(corpus)
 
-        tfidf = models.TfidfModel(corpus)
-        corpus_tfidf = tfidf[corpus]
-        lsi = models.LsiModel(corpus_tfidf, id2word=dictionary, num_topics=2) # initialize an LSI transformation
-        corpus_lsi = lsi[corpus_tfidf] # create a double wrapper over the original corpus: bow->tfidf->fold-in-lsi
-        lsi.print_topics(2)
+        self.tfidf = models.TfidfModel(self.corpus)
+        corpus_tfidf = self.tfidf[self.corpus]
+        self.lsi = models.LsiModel(corpus_tfidf, id2word=self.dictionary, num_topics=2) # initialize an LSI transformation
+        corpus_lsi = self.lsi[corpus_tfidf] # create a double wrapper over the original corpus: bow->tfidf->fold-in-lsi
+        # self.lsi.print_topics(2)
 
+        self.index = similarities.MatrixSimilarity(self.lsi[self.corpus]) # transform corpus to LSI space and index it
 
-    def querySimilarityMatrix(self, a, b):
+    def computeLSISimilarity(self):
+        for c in range(len(self.concepts)):
+            doc = self.concepts[c]
+            vec_bow = self.dictionary.doc2bow(doc.lower().split())
+            vec_lsi = self.lsi[vec_bow] # convert the query to LSI space
+
+            sims = self.index[vec_lsi] # perform a similarity query against the corpus
+            sims = sorted(enumerate(sims), key=lambda item: -item[1])
+            for sim in sims:
+                self.similarity[(c, sim[0])] = sim[1]
+
+    def querySimilarity(self, a, b):
         if a in self.concepts and b in self.concepts:
             indexA = self.concepts.index(a)
             indexB = self.concepts.index(b)
             self.log.info("Similarity between %s and %s is %s" % (self.concepts[indexA],
                                                                   self.concepts[indexB],
-                                                                  self.conceptsMatrix[indexA][indexB]))
+                                                                  self.similarity[(indexA, indexB)]))
         else:
             if a not in self.concepts:
                 self.log.info("%s not found in %s" % (a, self.endpoint))
             if b not in self.concepts:
                 self.log.info("%s not found in %s" % (b, self.endpoint))
 
-    def serializeSimilarityMatrix(self, outfile):
+    def serializeSimilarity(self, outfile):
         with open(outfile, 'wb') as csvfile:
             csvwriter = csv.writer(csvfile, delimiter=',',
                                     quotechar='\"', quoting=csv.QUOTE_MINIMAL)
             for i in range(len(self.concepts)):
                 for j in range(len(self.concepts)):
-                    csvwriter.writerow([self.concepts[i], 
-                                        self.concepts[j], 
-                                        self.conceptsMatrix[i][j]])
+                    csvwriter.writerow([self.datasets[i], 
+                                        self.datasets[j], 
+                                        self.similarity[(i,j)]])
 
 
 if __name__ == "__main__":
