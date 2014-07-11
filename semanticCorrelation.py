@@ -129,6 +129,7 @@ class SemanticCorrelation():
         with open(outfile, 'wb') as csvfile:
             csvwriter = csv.writer(csvfile, delimiter=',',
                                     quotechar='\"', quoting=csv.QUOTE_MINIMAL)
+            csvwriter.writerow(["datasetX", "datasetY", "similarity"])
             for i in range(len(self.concepts)):
                 for j in range(len(self.concepts)):
                     csvwriter.writerow([self.identifiers[i], 
