@@ -38,6 +38,6 @@ similarities.csv -v`
 
 ## Disclaimer
 
-Author: (Albert Meroño-Peñuela)[https://github.com/albertmeronyo]
+Author: [Albert Meroño-Peñuela](https://github.com/albertmeronyo)
 
-License: [LGPL v3.0](http://www.gnu.org/licenses/lgpl.html)
+License: [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
