@@ -137,7 +137,6 @@ class SemanticCorrelation():
                                         self.identifiers[j], 
                                         self.similarity[(i,j)]])
 
-
 if __name__ == "__main__":
     # Argument parsing
     parser = argparse.ArgumentParser(description="Computes semantic similarities between all concepts retrieved via SPARQL")
