@@ -94,7 +94,7 @@ class SemanticCorrelation():
 
         self.tfidf = models.TfidfModel(self.corpus)
         corpus_tfidf = self.tfidf[self.corpus]
-        self.lsi = models.LsiModel(corpus_tfidf, id2word=self.dictionary, num_topics=2) # initialize an LSI transformation
+        self.lsi = models.LsiModel(corpus_tfidf, id2word=self.dictionary, num_topics=200) # initialize an LSI transformation
         corpus_lsi = self.lsi[corpus_tfidf] # create a double wrapper over the original corpus: bow->tfidf->fold-in-lsi
         # self.lsi.print_topics(2)
 
@@ -110,6 +110,7 @@ class SemanticCorrelation():
             sims = sorted(enumerate(sims), key=lambda item: -item[1])
             for sim in sims:
                 self.similarity[(c, sim[0])] = sim[1]
+                self.log.debug([sim, self.concepts[c], self.concepts[sim[0]]])
 
     def querySimilarity(self, a, b):
         if a in self.concepts and b in self.concepts:
