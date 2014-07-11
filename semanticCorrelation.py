@@ -25,6 +25,7 @@ class SemanticCorrelation():
         self.log.debug('Setting up data structures...')
         self.concepts = []
         self.datasets = []
+        self.identifiers = []
         self.similarity = {} # keys are tuples (concept_1, concept_2)
 
         if self.endpoint:
@@ -46,7 +47,8 @@ class SemanticCorrelation():
             csvreader = csv.reader(csvfile, delimiter=',', quotechar='\"')
             for row in csvreader:
                 self.datasets.append(row[0])
-                self.concepts.append(row[1])
+                self.identifiers.append(row[1])
+                self.concepts.append(row[2])
 
     def queryEndpoint(self):
         sparql = SPARQLWrapper(self.endpoint)
@@ -58,6 +60,7 @@ class SemanticCorrelation():
 
         for result in results["results"]["bindings"]:
             self.concepts.append(result["title"]["value"])
+            self.identifiers.append(result["id"]["value"])
             self.datasets.append(result["dataset"]["value"])
         self.log.debug('Fecthed %s results' % len(self.concepts))
 
@@ -130,8 +133,8 @@ class SemanticCorrelation():
                                     quotechar='\"', quoting=csv.QUOTE_MINIMAL)
             for i in range(len(self.concepts)):
                 for j in range(len(self.concepts)):
-                    csvwriter.writerow([self.datasets[i], 
-                                        self.datasets[j], 
+                    csvwriter.writerow([self.identifiers[i], 
+                                        self.identifiers[j], 
                                         self.similarity[(i,j)]])
 
 
