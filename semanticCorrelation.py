@@ -24,7 +24,6 @@ class SemanticCorrelation():
 
         self.log.debug('Setting up data structures...')
         self.concepts = []
-        self.datasets = []
         self.identifiers = []
         self.similarity = {} # keys are tuples (concept_1, concept_2)
 
@@ -46,9 +45,8 @@ class SemanticCorrelation():
         with open(infile, 'rb') as csvfile:
             csvreader = csv.reader(csvfile, delimiter=',', quotechar='\"')
             for row in csvreader:
-                self.datasets.append(row[0])
-                self.identifiers.append(row[1])
-                self.concepts.append(row[2])
+                self.identifiers.append(row[0])
+                self.concepts.append(row[1])
 
     def queryEndpoint(self):
         sparql = SPARQLWrapper(self.endpoint)
@@ -57,11 +55,9 @@ class SemanticCorrelation():
         sparql.setReturnFormat(JSON)
         self.log.debug('Querying endpoint...')
         results = sparql.query().convert()
-
         for result in results["results"]["bindings"]:
             self.concepts.append(result["title"]["value"])
-            self.identifiers.append(result["id"]["value"])
-            self.datasets.append(result["dataset"]["value"])
+            self.identifiers.append(result["identifier"]["value"])
         self.log.debug('Fecthed %s results' % len(self.concepts))
 
     def computeWordnetSimilarity(self):
