@@ -12,21 +12,25 @@ from gensim import corpora, models, similarities
 
 class SemanticCorrelation():
     
-    def __init__(self, __endpoint, __logLevel, __outfile, __infile = None):
+    def __init__(self, __logLevel, __outfile, __endpoint = None, __infile = None):
         self.log = logging.getLogger('SemanticCorrelation')
         self.log.setLevel(__logLevel)
 
         self.endpoint = __endpoint
         self.outfile = __outfile
+        self.infile = __infile
 
         self.log.debug('Setting up data structures...')
         self.concepts = []
         self.datasets = []
         self.similarity = {} # keys are tuples (concept_1, concept_2)
 
-        self.log.debug('Querying endpoint at %s...' % self.endpoint)
-        self.queryEndpoint()
-        # self.readLocalFile(__infile)
+        if self.endpoint:
+            self.log.debug('Querying endpoint at %s...' % self.endpoint)
+            self.queryEndpoint()
+        else:
+            self.log.debug('Reading local CSV cache %s...' % self.infile)
+            self.readLocalFile(self.infile)
         self.log.debug('Computing semantic similarity...')
         # self.computeWordnetSimilarity()
         self.computeLSI()
@@ -39,7 +43,8 @@ class SemanticCorrelation():
         with open(infile, 'rb') as csvfile:
             csvreader = csv.reader(csvfile, delimiter=',', quotechar='\"')
             for row in csvreader:
-                self.concepts.append(row[0])
+                self.datasets.append(row[0])
+                self.concepts.append(row[1])
 
     def queryEndpoint(self):
         sparql = SPARQLWrapper(self.endpoint)
@@ -192,28 +197,18 @@ class SemanticCorrelation():
 if __name__ == "__main__":
     # Argument parsing
     parser = argparse.ArgumentParser(description="Computes semantic similarities between all concepts retrieved via SPARQL")
-    parser.add_argument('--endpoint', '-e',
-                        help = "SPARQL endpoint to query", 
-                        required = True)
-    parser.add_argument('--limit', '-l',
-                        help = "Number of max results to retrieve", 
-                        required = False)
+    input_group = parser.add_mutually_exclusive_group(required=True)
+    input_group.add_argument('--endpoint', '-e',
+                        help = "Read literals from SPARQL endpoint")
+    input_group.add_argument('--infile', '-i',
+                        help = "Read from local CSV cache")
     parser.add_argument('--verbose', '-v',
                         help = "Be verbose -- debug logging level",
                         required = False, 
                         action = 'store_true')
-    parser.add_argument('--query-a', '-qa',
-                        help = "First concept to compare",
-                        required = True)
-    parser.add_argument('--query-b', '-qb',
-                        help = "Second concept to compare",
-                        required = True)
     parser.add_argument('--outfile', '-o',
                         help = "Output CSV file to write similarities",
                         required = True)
-    parser.add_argument('--infile', '-i',
-                        help = "Read from local file instead of endpoint",
-                        required = False)
 
     args = parser.parse_args()
 
@@ -225,6 +220,6 @@ if __name__ == "__main__":
     logging.info('Initializing...')
 
     # Instance
-    semcor = SemanticCorrelation(args.endpoint, logLevel, args.outfile, args.infile)
+    semcor = SemanticCorrelation(logLevel, args.outfile, args.endpoint, args.infile)
 
     logging.info('Done.')
