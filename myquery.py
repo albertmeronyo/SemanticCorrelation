@@ -48,7 +48,7 @@ SPARQL_QUERY = """
         PREFIX g-projects: <http://worldbank.270a.info/graph/world-bank-projects-and-operations>
         PREFIX g-indicators: <http://worldbank.270a.info/graph/world-development-indicators>
 
-        SELECT DISTINCT ?dataset ?id ?title
+        SELECT DISTINCT ?identifier ?title
         WHERE {
         GRAPH g-indicators: {
         ?s qb:dataSet ?dataset .

@@ -44,7 +44,7 @@ class SemanticCorrelation():
     def readLocalFile(self, infile):
         with open(infile, 'rb') as csvfile:
             csvreader = csv.reader(csvfile, delimiter=',', quotechar='\"')
-            next(reader, None)  # skip the headers
+            next(csvreader, None)  # skip the headers
             for row in csvreader:
                 self.identifiers.append(row[0])
                 self.concepts.append(row[1])
@@ -56,7 +56,7 @@ class SemanticCorrelation():
         sparql.setReturnFormat(JSON)
         self.log.debug('Querying endpoint...')
         results = sparql.query().convert()
-        for result in results["results"]["bindings"]
+        for result in results["results"]["bindings"]:
             self.concepts.append(result["title"]["value"])
             self.identifiers.append(result["identifier"]["value"])
         self.log.debug('Fecthed %s results' % len(self.concepts))
