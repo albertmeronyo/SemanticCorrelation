@@ -15,13 +15,14 @@ import myquery
 
 class SemanticCorrelation():
     
-    def __init__(self, __logLevel, __outfile, __endpoint = None, __infile = None):
+    def __init__(self, __logLevel, __outfile, __endpoint = None, __infile = None, __ntopics = 200):
         self.log = logging.getLogger('SemanticCorrelation')
         self.log.setLevel(__logLevel)
 
         self.endpoint = __endpoint
         self.outfile = __outfile
         self.infile = __infile
+        self.ntopics = __ntopics
 
         self.log.info('Setting up data structures...')
         self.concepts = []
@@ -36,7 +37,7 @@ class SemanticCorrelation():
             self.readLocalFile(self.infile)
         self.log.info('Computing semantic similarity...')
         # self.computeWordnetSimilarity()
-        self.computeLSI()
+        self.computeLSI(self.ntopics)
         self.computeLSISimilarity()
         # print self.similarity
         self.log.info('Serializing to %s...' % self.outfile)
@@ -75,7 +76,7 @@ class SemanticCorrelation():
                     similarity = synsetsA[0].path_similarity(synsetsB[0])
                 self.similarity[(i,j)] = similarity
 
-    def computeLSI(self):
+    def computeLSI(self, ntopics):
         # stoplist = set('for a of the and to in as'.split())
         tokenizer = nltk.tokenize.RegexpTokenizer('\(.*\)|[\s\.\,\%\:\$]+|[.+/.+]', gaps=True)
         texts = [[word for word in tokenizer.tokenize(document.lower()) if word not in nltk.corpus.stopwords.words('english')] for document in self.concepts]
@@ -97,7 +98,7 @@ class SemanticCorrelation():
 
         self.tfidf = models.TfidfModel(self.corpus)
         corpus_tfidf = self.tfidf[self.corpus]
-        self.lsi = models.LsiModel(corpus_tfidf, id2word=self.dictionary, num_topics=200) # initialize an LSI transformation
+        self.lsi = models.LsiModel(corpus_tfidf, id2word=self.dictionary, num_topics=ntopics) # initialize an LSI transformation
         corpus_lsi = self.lsi[corpus_tfidf] # create a double wrapper over the original corpus: bow->tfidf->fold-in-lsi
         # self.lsi.print_topics(2)
 
@@ -152,6 +153,10 @@ if __name__ == "__main__":
                         help = "Be verbose -- debug logging level",
                         required = False, 
                         action = 'store_true')
+    parser.add_argument('--topics', '-t',
+                        help = "Number of topics for the LSI (default 200)",
+                        required = False,
+                        default = 200)
     parser.add_argument('--outfile', '-o',
                         help = "Output CSV file to write similarities",
                         required = True)
@@ -166,6 +171,6 @@ if __name__ == "__main__":
     logging.info('Initializing...')
 
     # Instance
-    semcor = SemanticCorrelation(logLevel, args.outfile, args.endpoint, args.infile)
+    semcor = SemanticCorrelation(logLevel, args.outfile, args.endpoint, args.infile, args.topics)
 
     logging.info('Done.')
