@@ -24,7 +24,7 @@ of datasets.
 `./semanticCorrelation.py [-e <endpoint> | -i <input.csv>] -o
 <output.csv> [-v] [-t <numtopics>]`
 
-<numtopics> is the number of topics for LSI (default 200)
+`<numtopics>` is the number of topics for LSI (default 200)
 
 ## Example
 
