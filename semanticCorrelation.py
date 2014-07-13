@@ -78,7 +78,7 @@ class SemanticCorrelation():
 
     def computeLSI(self, ntopics):
         # stoplist = set('for a of the and to in as'.split())
-        tokenizer = nltk.tokenize.RegexpTokenizer('\(.*\)|[\s\.\,\%\:\$]+|[.+/.+]', gaps=True)
+        tokenizer = nltk.tokenize.RegexpTokenizer('\(.*\)|[\s\.\,\%\:\$]+', gaps=True)
         texts = [[word for word in tokenizer.tokenize(document.lower()) if word not in nltk.corpus.stopwords.words('english')] for document in self.concepts]
         self.log.debug(texts)
 
