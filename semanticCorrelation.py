@@ -9,6 +9,7 @@ import argparse
 import logging
 import csv
 from gensim import corpora, models, similarities
+import sys
 
 import myquery
 
@@ -76,7 +77,9 @@ class SemanticCorrelation():
 
     def computeLSI(self):
         # stoplist = set('for a of the and to in as'.split())
-        texts = [[word for word in nltk.word_tokenize(document.lower()) if word not in nltk.corpus.stopwords.words('english')] for document in self.concepts]
+        tokenizer = nltk.tokenize.RegexpTokenizer('\(.*\)|[\s\.\,\%\:\$]+|[.+/.+]', gaps=True)
+        texts = [[word for word in tokenizer.tokenize(document.lower()) if word not in nltk.corpus.stopwords.words('english')] for document in self.concepts]
+        self.log.debug(texts)
 
         # remove words that appear only once
         all_tokens = sum(texts, [])
