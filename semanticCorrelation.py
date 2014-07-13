@@ -22,23 +22,23 @@ class SemanticCorrelation():
         self.outfile = __outfile
         self.infile = __infile
 
-        self.log.debug('Setting up data structures...')
+        self.log.info('Setting up data structures...')
         self.concepts = []
         self.identifiers = []
         self.similarity = {} # keys are tuples (concept_1, concept_2)
 
         if self.endpoint:
-            self.log.debug('Querying endpoint at %s...' % self.endpoint)
+            self.log.info('Querying endpoint at %s...' % self.endpoint)
             self.queryEndpoint()
         else:
-            self.log.debug('Reading local CSV cache %s...' % self.infile)
+            self.log.info('Reading local CSV cache %s...' % self.infile)
             self.readLocalFile(self.infile)
-        self.log.debug('Computing semantic similarity...')
+        self.log.info('Computing semantic similarity...')
         # self.computeWordnetSimilarity()
         self.computeLSI()
         self.computeLSISimilarity()
         # print self.similarity
-        self.log.debug('Serializing to %s...' % self.outfile)
+        self.log.info('Serializing to %s...' % self.outfile)
         self.serializeSimilarity(self.outfile)
 
     def readLocalFile(self, infile):
@@ -131,9 +131,10 @@ class SemanticCorrelation():
                                     quotechar='\"', quoting=csv.QUOTE_MINIMAL)
             for i in range(len(self.concepts)):
                 for j in range(len(self.concepts)):
-                    csvwriter.writerow([self.identifiers[i], 
-                                        self.identifiers[j], 
-                                        self.similarity[(i,j)]])
+                    if i <= j:
+                        csvwriter.writerow([self.identifiers[i], 
+                                            self.identifiers[j], 
+                                            self.similarity[(i,j)]])
 
 if __name__ == "__main__":
     # Argument parsing
