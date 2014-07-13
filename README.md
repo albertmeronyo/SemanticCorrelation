@@ -22,12 +22,14 @@ of datasets.
 ## How to use it?
 
 `./semanticCorrelation.py [-e <endpoint> | -i <input.csv>] -o
-<output.csv> [-v]`
+<output.csv> [-v] [-t <numtopics>]`
+
+<numtopics> is the number of topics for LSI (default 200)
 
 ## Example
 
 `./semanticCorrelation.py -e http://worldbank.270a.info/sparql -o
-similarities.csv -v`
+similarities.csv -v -t 300`
 
 ## Dependencies
 
