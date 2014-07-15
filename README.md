@@ -22,9 +22,12 @@ of datasets.
 ## How to use it?
 
 `./semanticCorrelation.py [-e <endpoint> | -i <input.csv>] -o
-<output.csv> [-v] [-t <numtopics>]`
+<output.csv> [-v] [-t <numtopics>] [-it <numiterations>]`
 
-`<numtopics>` is the number of topics for LSI (default 200)
+- `<numtopics>` is the number of topics for LSI (default 200)
+- `<numiterations>` is the number of power iterations for LSI (default
+  2). With more iterations precision increases, but efficiency
+  decreases
 
 ## Example
 

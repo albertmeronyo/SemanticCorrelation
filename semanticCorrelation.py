@@ -15,14 +15,15 @@ import myquery
 
 class SemanticCorrelation():
     
-    def __init__(self, __logLevel, __outfile, __endpoint = None, __infile = None, __ntopics = 200):
+    def __init__(self, __logLevel, __outfile, __endpoint = None, __infile = None, __ntopics = 200, __iters = 2):
         self.log = logging.getLogger('SemanticCorrelation')
         self.log.setLevel(__logLevel)
 
         self.endpoint = __endpoint
         self.outfile = __outfile
         self.infile = __infile
-        self.ntopics = __ntopics
+        self.ntopics = int(__ntopics)
+        self.iters = int(__iters)
 
         self.log.info('Setting up data structures...')
         self.concepts = []
@@ -35,9 +36,9 @@ class SemanticCorrelation():
         else:
             self.log.info('Reading local CSV cache %s...' % self.infile)
             self.readLocalFile(self.infile)
-        self.log.info('Computing semantic similarity...')
+        self.log.info('Computing semantic similarity with %s topics...' % self.ntopics)
         # self.computeWordnetSimilarity()
-        self.computeLSI(self.ntopics)
+        self.computeLSI()
         self.computeLSISimilarity()
         # print self.similarity
         self.log.info('Serializing to %s...' % self.outfile)
@@ -76,7 +77,7 @@ class SemanticCorrelation():
                     similarity = synsetsA[0].path_similarity(synsetsB[0])
                 self.similarity[(i,j)] = similarity
 
-    def computeLSI(self, ntopics):
+    def computeLSI(self):
         # stoplist = set('for a of the and to in as'.split())
         tokenizer = nltk.tokenize.RegexpTokenizer('\(.*\)|[\s\.\,\%\:\$]+', gaps=True)
         texts = [[word for word in tokenizer.tokenize(document.lower()) if word not in nltk.corpus.stopwords.words('english')] for document in self.concepts]
@@ -98,7 +99,7 @@ class SemanticCorrelation():
 
         self.tfidf = models.TfidfModel(self.corpus)
         corpus_tfidf = self.tfidf[self.corpus]
-        self.lsi = models.LsiModel(corpus_tfidf, id2word=self.dictionary, num_topics=ntopics) # initialize an LSI transformation
+        self.lsi = models.LsiModel(corpus_tfidf, power_iters=self.iters, id2word=self.dictionary, num_topics=self.ntopics) # initialize an LSI transformation
         corpus_lsi = self.lsi[corpus_tfidf] # create a double wrapper over the original corpus: bow->tfidf->fold-in-lsi
         # self.lsi.print_topics(2)
 
@@ -157,6 +158,10 @@ if __name__ == "__main__":
                         help = "Number of topics for the LSI (default 200)",
                         required = False,
                         default = 200)
+    parser.add_argument('--iters', '-it',
+                        help = "Number of power iterations (default 2)",
+                        required = False,
+                        default = 2)
     parser.add_argument('--outfile', '-o',
                         help = "Output CSV file to write similarities",
                         required = True)
@@ -171,6 +176,6 @@ if __name__ == "__main__":
     logging.info('Initializing...')
 
     # Instance
-    semcor = SemanticCorrelation(logLevel, args.outfile, args.endpoint, args.infile, args.topics)
+    semcor = SemanticCorrelation(logLevel, args.outfile, args.endpoint, args.infile, args.topics, args.iters)
 
     logging.info('Done.')
