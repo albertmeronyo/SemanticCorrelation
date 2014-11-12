@@ -20,6 +20,8 @@ class DSDDiff():
         self.dsd_b = rdflib.Graph()
 
         # 1. Retrieve and load RDF data from specified URIs
+        self.log.debug(urllib2.urlopen(self.dsd_uri_a).read())
+        self.log.debug(urllib2.urlopen(self.dsd_uri_b).read())
         self.dsd_a.load(self.dsd_uri_a)
         self.dsd_b.load(self.dsd_uri_b)
         self.log.debug(self.dsd_a)
@@ -28,6 +30,9 @@ class DSDDiff():
         # 3. Compare the DSDs
 
         # 4. Show the result
+
+    def printDSD(dsd):
+        self.log.info()
 
 if __name__ == "__main__":
     # Argument parsing
@@ -47,7 +52,7 @@ if __name__ == "__main__":
     logLevel = logging.INFO
     if args.verbose:
         logLevel = logging.DEBUG
-    logging.basicConfig(level=logLevel)
+    logging.basicConfig(level=logLevel, format='[%(asctime)s]::%(levelname)s:%(module)s::%(message)s')
     logging.info('Initializing...')
 
     # Instance
